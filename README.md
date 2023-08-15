@@ -11,7 +11,27 @@ Here's how to deploy it on CentOS systems:
 ```
 sudo yum install -y firewalld
 sudo service firewalld start
+# Estado del firewall
 sudo systemctl enable firewalld
+service firewalld status
+# salida: firewalld.service - firewalld - dynamic firewall daemon
+    Loaded: loaded (/usr/lib/systemd/system/firewalld.service; enabled; vendor preset: enabled)
+    Active: active (running) since Tue 2023-08-15 15:36:19 EDT; 12min ago
+# Reglas del firewall
+sudo firewall-cmd --list-all
+# salida: public (active)
+  target: default
+  icmp-block-inversion: no
+  interfaces: enp0s3
+  sources:
+  services: dhcpv6-client ssh
+  ports:
+  protocols:
+  masquerade: no
+  forward-ports:
+  source-ports:
+  icmp-blocks:
+  rich rules:
 ```
 
 ## Deploy and Configure Database
@@ -23,6 +43,26 @@ sudo yum install -y mariadb-server
 sudo vi /etc/my.cnf
 sudo service mariadb start
 sudo systemctl enable mariadb
+service mariadb status
+# salida: mariadb.service - MariaDB database server
+  Loaded: loaded (/usr/lib/systemd/system/mariadb.service; enabled; vendor preset: disabled)
+  Active: active (running) since Tue 2023-08-15 16:00:58 EDT; 1min 21s ago
+# Reglas del firewall
+sudo firewall-cmd --list-all
+# salida: sudo firewall-cmd --list-all
+public (active)
+  target: default
+  icmp-block-inversion: no
+  interfaces: enp0s3
+  sources:
+  services: dhcpv6-client ssh
+  ports: 3306/tcp
+  protocols:
+  masquerade: no
+  forward-ports:
+  source-ports:
+  icmp-blocks:
+  rich rules:
 ```
 
 2. Configure firewall for Database
@@ -35,11 +75,12 @@ sudo firewall-cmd --reload
 3. Configure Database
 
 ```
-$ mysql
+$ mysql -u root -p
 MariaDB > CREATE DATABASE ecomdb;
 MariaDB > CREATE USER 'ecomuser'@'localhost' IDENTIFIED BY 'ecompassword';
 MariaDB > GRANT ALL PRIVILEGES ON *.* TO 'ecomuser'@'localhost';
 MariaDB > FLUSH PRIVILEGES;
+MariaDB > exit
 ```
 
 > ON a multi-node setup remember to provide the IP address of the web server here: `'ecomuser'@'web-server-ip'`
@@ -74,6 +115,21 @@ mysql < db-load-script.sql
 sudo yum install -y httpd php php-mysql
 sudo firewall-cmd --permanent --zone=public --add-port=80/tcp
 sudo firewall-cmd --reload
+# Reglas del firewall
+sudo firewall-cmd --list-all
+#salida: public (active)
+  target: default
+  icmp-block-inversion: no
+  interfaces: enp0s3
+  sources:
+  services: dhcpv6-client ssh
+  ports: 3306/tcp 80/tcp
+  protocols:
+  masquerade: no
+  forward-ports:
+  source-ports:
+  icmp-blocks:
+  rich rules:
 ```
 
 2. Configure httpd
@@ -81,6 +137,7 @@ sudo firewall-cmd --reload
 Change `DirectoryIndex index.html` to `DirectoryIndex index.php` to make the php page the default page
 
 ```
+sudo vi /etc/httpd/conf/httpd.conf # reemplazar index.html por index.php
 sudo sed -i 's/index.html/index.php/g' /etc/httpd/conf/httpd.conf
 ```
 
@@ -89,6 +146,11 @@ sudo sed -i 's/index.html/index.php/g' /etc/httpd/conf/httpd.conf
 ```
 sudo service httpd start
 sudo systemctl enable httpd
+# Estado del servicio
+sudo systemctl status httpd
+# salida: httpd.service - The Apache HTTP Server
+  Loaded: loaded (/usr/lib/systemd/system/httpd.service; enabled; vendor preset: disabled)
+  Active: active (running) since Tue 2023-08-15 16:23:47 EDT; 1h 37min ago
 ```
 
 4. Download code
